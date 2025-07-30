@@ -1,5 +1,6 @@
 package com.yourcompany.deepseek;
 import java.io.*;
+import java.util.function.Function;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +22,7 @@ public class DeepSeekAIClient {
     }
 
     // DeepSeek API 配置
-    private static final String API_KEY = "your_api_key_here";
+    private static final String API_KEY = "sk-2cc5cc7c0b3347d1ac3cb3aceac2f066"; //api是在deepseek上新注册的，目前没有花费，仅做测试
     private static final String API_ENDPOINT = "https://api.deepseek.com/v1/chat/completions";
 
     //建议的API调用额度
@@ -78,7 +79,7 @@ public class DeepSeekAIClient {
                     return parseResponse(response.toString());
                 }
             } else {
-                System.err.println("API请求失败，响应码: " + responseCode);
+                System.err.println("API请求失败,响应码: " + responseCode);
                 try (BufferedReader br = new BufferedReader(
                         new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8))) {
                     StringBuilder errorResponse = new StringBuilder();
@@ -88,7 +89,7 @@ public class DeepSeekAIClient {
                     }
                     System.err.println("错误响应: " + errorResponse.toString());
                 }
-                return "抱歉，AI客服暂时无法提供服务，请稍后再试。";
+                return "抱歉,AI客服暂时无法提供服务,请稍后再试。";
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -137,7 +138,7 @@ public class DeepSeekAIClient {
             return jsonResponse.substring(start, end).replace("\\n", "\n");
         } catch (Exception e) {
             System.err.println("解析响应失败: " + e.getMessage());
-            return "抱歉，解析AI回复时出现问题。";
+            return "抱歉,解析AI回复时出现问题。";
         }
     }
 }
