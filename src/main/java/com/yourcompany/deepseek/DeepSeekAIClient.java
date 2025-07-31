@@ -1,6 +1,11 @@
 package com.yourcompany.deepseek;
+
 import java.io.*;
 import java.util.function.Function;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -15,24 +20,24 @@ public class DeepSeekAIClient {
             throw new RuntimeException(e);
         }
     };
-    
+
     // 允许测试时替换连接
     public static void setConnectionProvider(Function<String, HttpURLConnection> provider) {
         connectionProvider = provider;
     }
 
     // DeepSeek API 配置
-    private static final String API_KEY = "sk-2cc5cc7c0b3347d1ac3cb3aceac2f066"; //api是在deepseek上新注册的，目前没有花费，仅做测试
+    private static final String API_KEY = "sk-2cc5cc7c0b3347d1ac3cb3aceac2f066"; // api是在deepseek上新注册的，目前没有花费，仅做测试
     private static final String API_ENDPOINT = "https://api.deepseek.com/v1/chat/completions";
 
-    //建议的API调用额度
-    //private static final String API_URL = "YOUR_CURRENT_API_ENDPOINT";
-    //private static final int MAX_FREE_CALLS = 100; // 根据实际调整
-    //public String getResponse(String query) throws OverQuotaException {
-        //if(usedCount >= MAX_FREE_CALLS) {
-            //throw new OverQuotaException("已达到试用限额");
-        //}
-    //}
+    // 建议的API调用额度
+    // private static final String API_URL = "YOUR_CURRENT_API_ENDPOINT";
+    // private static final int MAX_FREE_CALLS = 100; // 根据实际调整
+    // public String getResponse(String query) throws OverQuotaException {
+    // if(usedCount >= MAX_FREE_CALLS) {
+    // throw new OverQuotaException("已达到试用限额");
+    // }
+    // }
 
     public static void main(String[] args) {
         String userQuery = "你好，我想咨询一下你们的产品";
@@ -42,6 +47,7 @@ public class DeepSeekAIClient {
 
     /**
      * 获取AI客服的回复
+     * 
      * @param userMessage 用户输入的消息
      * @return AI生成的回复
      */
@@ -49,9 +55,9 @@ public class DeepSeekAIClient {
         try {
             // 创建请求URL
             URL url = new URL(API_ENDPOINT);
-            
+
             // 打开连接
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            HttpURLConnection connection = connectionProvider.apply(API_ENDPOINT);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
@@ -59,11 +65,13 @@ public class DeepSeekAIClient {
 
             // 构建请求体
             String requestBody = buildRequestBody(userMessage);
-            
+
             // 发送请求
             try (OutputStream os = connection.getOutputStream()) {
                 byte[] input = requestBody.getBytes(StandardCharsets.UTF_8);
                 os.write(input, 0, input.length);
+            } finally {
+                connection.disconnect();
             }
 
             // 获取响应
@@ -99,6 +107,7 @@ public class DeepSeekAIClient {
 
     /**
      * 构建API请求体
+     * 
      * @param message 用户消息
      * @return JSON格式的请求体
      */
@@ -124,21 +133,13 @@ public class DeepSeekAIClient {
 
     /**
      * 解析API响应
+     * 
      * @param jsonResponse API返回的JSON响应
      * @return 提取的AI回复内容
      */
-    private static String parseResponse(String jsonResponse) {
-        // 这里需要根据DeepSeek API的实际响应格式进行调整
-        // 这是一个简化的解析示例，实际使用时可能需要使用JSON库如Jackson或Gson
-        
-        // 假设响应格式为: {"choices":[{"message":{"content":"AI回复内容"}}]}
-        try {
-            int start = jsonResponse.indexOf("\"content\":\"") + 11;
-            int end = jsonResponse.indexOf("\"", start);
-            return jsonResponse.substring(start, end).replace("\\n", "\n");
-        } catch (Exception e) {
-            System.err.println("解析响应失败: " + e.getMessage());
-            return "抱歉,解析AI回复时出现问题。";
-        }
+    private static String parseResponse(String jsonResponse) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(jsonResponse);
+        return root.path("choices").get(0).path("message").path("content").asText();
     }
 }
