@@ -2,22 +2,25 @@ package com.yourcompany.deepseek;
 
 import java.io.*;
 import java.util.function.Function;
-
+import java.net.URI;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class DeepSeekAIClient {
+    private static final Logger logger = LoggerFactory.getLogger(DeepSeekAIClient.class);
 
     // 添加连接提供器用于测试
     static Function<String, HttpURLConnection> connectionProvider = url -> {
         try {
-            return (HttpURLConnection) new URL(url).openConnection();
+            return (HttpURLConnection) URI.create(url).toURL().openConnection();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ConnectionFailedException("Failed to connect to: " + url, e);
         }
     };
 
@@ -30,19 +33,10 @@ public class DeepSeekAIClient {
     private static final String API_KEY = "sk-2cc5cc7c0b3347d1ac3cb3aceac2f066"; // api是在deepseek上新注册的，目前没有花费，仅做测试
     private static final String API_ENDPOINT = "https://api.deepseek.com/v1/chat/completions";
 
-    // 建议的API调用额度
-    // private static final String API_URL = "YOUR_CURRENT_API_ENDPOINT";
-    // private static final int MAX_FREE_CALLS = 100; // 根据实际调整
-    // public String getResponse(String query) throws OverQuotaException {
-    // if(usedCount >= MAX_FREE_CALLS) {
-    // throw new OverQuotaException("已达到试用限额");
-    // }
-    // }
-
     public static void main(String[] args) {
         String userQuery = "你好，我想咨询一下你们的产品";
         String aiResponse = getAIResponse(userQuery);
-        System.out.println("AI客服回复: " + aiResponse);
+        logger.info("AI客服回复: {}", aiResponse);
     }
 
     /**
@@ -53,9 +47,6 @@ public class DeepSeekAIClient {
      */
     public static String getAIResponse(String userMessage) {
         try {
-            // 创建请求URL
-            URL url = new URL(API_ENDPOINT);
-
             // 打开连接
             HttpURLConnection connection = connectionProvider.apply(API_ENDPOINT);
             connection.setRequestMethod("POST");
@@ -84,10 +75,15 @@ public class DeepSeekAIClient {
                     while ((responseLine = br.readLine()) != null) {
                         response.append(responseLine.trim());
                     }
-                    return parseResponse(response.toString());
+                    String aiResponse = parseResponse(response.toString());
+
+                    if (logger.isInfoEnabled()) {
+                        logger.info("AI客服回复: {}", aiResponse);
+                    }
+                    return aiResponse; // 返回AI回复
                 }
             } else {
-                System.err.println("API请求失败,响应码: " + responseCode);
+                logger.error("API请求失败,响应码: {}", responseCode);
                 try (BufferedReader br = new BufferedReader(
                         new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8))) {
                     StringBuilder errorResponse = new StringBuilder();
@@ -95,12 +91,15 @@ public class DeepSeekAIClient {
                     while ((responseLine = br.readLine()) != null) {
                         errorResponse.append(responseLine.trim());
                     }
-                    System.err.println("错误响应: " + errorResponse.toString());
+                    logger.error("错误响应: {}", errorResponse);
                 }
                 return "抱歉,AI客服暂时无法提供服务,请稍后再试。";
             }
+
         } catch (Exception e) {
-            e.printStackTrace();
+            if (logger.isErrorEnabled()) {
+                logger.error("处理请求时出现错误", e);
+            }
             return "处理您的请求时出现错误: " + e.getMessage();
         }
     }
@@ -111,24 +110,26 @@ public class DeepSeekAIClient {
      * @param message 用户消息
      * @return JSON格式的请求体
      */
-    private static String buildRequestBody(String message) {
+    static String buildRequestBody(String message) {
         // 这里可以根据DeepSeek API的实际要求调整请求体结构
         // 以下是一个通用的ChatCompletion请求示例
-        return String.format("{\n" +
-                "  \"model\": \"deepseek-chat\",\n" +
-                "  \"messages\": [\n" +
-                "    {\n" +
-                "      \"role\": \"system\",\n" +
-                "      \"content\": \"你是一个专业的客服助手，负责回答客户关于公司产品和服务的咨询。请保持友好、专业的语气，提供准确的信息。\"\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"role\": \"user\",\n" +
-                "      \"content\": \"%s\"\n" +
-                "    }\n" +
-                "  ],\n" +
-                "  \"temperature\": 0.7,\n" +
-                "  \"max_tokens\": 1000\n" +
-                "}", message);
+        return String.format("""
+                {
+                  "model": "deepseek-chat",
+                  "messages": [
+                    {
+                      "role": "system",
+                      "content": "你是一个专业的客服助手，负责回答客户关于公司产品和服务的咨询。请保持友好、专业的语气，提供准确的信息。"
+                    },
+                    {
+                      "role": "user",
+                      "content": "%s"
+                    }
+                  ],
+                  "temperature": 0.7,
+                  "max_tokens": 1000
+                }
+                """, message);
     }
 
     /**
@@ -137,7 +138,7 @@ public class DeepSeekAIClient {
      * @param jsonResponse API返回的JSON响应
      * @return 提取的AI回复内容
      */
-    private static String parseResponse(String jsonResponse) throws IOException {
+    static String parseResponse(String jsonResponse) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(jsonResponse);
         return root.path("choices").get(0).path("message").path("content").asText();
