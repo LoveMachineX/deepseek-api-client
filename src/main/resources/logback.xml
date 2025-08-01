@@ -1,25 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- 控制台输出 -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <charset>UTF-8</charset>  <!-- 关键：强制指定日志编码 -->
+        <encoder charset="UTF-8">
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
+        <withJansi>true</withJansi>
+        <target>System.out</target> 
     </appender>
-
-    <!-- 文件输出（可选） -->
-    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>logs/application.log</file>
-        <encoder>
-            <charset>UTF-8</charset>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-
-    <!-- 默认日志级别 -->
     <root level="INFO">
         <appender-ref ref="STDOUT" />
-        <!-- <appender-ref ref="FILE" /> -->  <!-- 如需文件日志，取消注释 -->
     </root>
 </configuration>

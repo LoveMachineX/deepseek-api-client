@@ -36,7 +36,12 @@ public class DeepSeekAIClient {
     public static void main(String[] args) {
         String userQuery = "你好，我想咨询一下你们的产品";
         String aiResponse = getAIResponse(userQuery);
-        logger.info("AI客服回复: {}", aiResponse);
+
+        // 直接使用System.out测试
+        System.out.println("直接输出测试: " + aiResponse);
+
+        // 使用Logger测试
+        logger.info("Logger输出测试: {}", aiResponse);
     }
 
     /**
@@ -50,7 +55,8 @@ public class DeepSeekAIClient {
             // 打开连接
             HttpURLConnection connection = connectionProvider.apply(API_ENDPOINT);
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            connection.setRequestProperty("Accept-Charset", "UTF-8");
             connection.setRequestProperty("Authorization", "Bearer " + API_KEY);
             connection.setDoOutput(true);
 
