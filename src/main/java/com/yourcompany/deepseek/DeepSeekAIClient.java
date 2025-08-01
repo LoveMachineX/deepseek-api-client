@@ -30,7 +30,7 @@ public class DeepSeekAIClient {
     }
 
     // DeepSeek API 配置
-    private static final String API_KEY = "sk-2cc5cc7c0b3347d1ac3cb3aceac2f066"; // api是在deepseek上新注册的，目前没有花费，仅做测试
+    private static final String API_KEY = "sk-2cc5cc7c0b3347d1ac3cb3aceac2f066"; // api是在deepseek上新注册的，已充值10元，仅做测试
     private static final String API_ENDPOINT = "https://api.deepseek.com/v1/chat/completions";
 
     public static void main(String[] args) {
